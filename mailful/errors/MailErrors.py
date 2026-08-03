@@ -5,3 +5,4 @@ class MailSendError(Exception):
         self.error = error
     
     pass
+

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mailful"
-version = "0.0.1.dev3"
+version = "0.0.1.dev4"
 description = "Unified, Modular, and Agnostic Asynchronous (but also Synchronous) mail client for multiple providers."
 requires-python = ">=3.10"
 authors = [

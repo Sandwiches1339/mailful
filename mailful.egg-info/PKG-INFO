@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: mailful
-Version: 0.0.1.dev3
+Version: 0.0.1.dev4
 Summary: Unified, Modular, and Agnostic Asynchronous (but also Synchronous) mail client for multiple providers.
 Author-email: sandwiches1399 <sandwichesarethebestmeow@gmail.com>
 License: Copyright © 2026 sandwichessomewhere.online (sandwiches1399)

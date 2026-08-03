@@ -1,6 +1,7 @@
 from typing import Sequence, DefaultDict, List
 from dataclasses import field
 from ..helpers.MailClasses import MailRecipient
+from .email_util_errors.EmailClassesErrors import EmailDraftfulFailedRemoveError
 
 class EmailDraftful:
     def __init__(self, *, 
@@ -18,8 +19,37 @@ class EmailDraftful:
         self.subject: str = subject or ""
         self.text: str = text or ""
         self.html: str = html or ""
+
+    def _helper_remove_recip(self, recip, classname):
+        try:
+
+            if isinstance(recip, (MailRecipient, str)):
+                self.__getattribute__(classname).remove(recip)
+                return
+            
+            if isinstance(recip, Sequence):
+                
+                for recipient in recip:
+                    if isinstance(recipient, MailRecipient):
+                        
+                        self.__getattribute__(classname).remove(recipient)
+                        
+                        continue
+    
+                    if isinstance(recipient, str):
+                        
+                        self.__getattribute__(classname).remove(recipient)
+                        
+                        continue
+
+        except ValueError as e:
+            raise EmailDraftfulFailedRemoveError(f"Failed to remove {recip} from {classname}")
     
     def _helper_add_recip(self, recip, classname):
+        if isinstance(recip, (MailRecipient, str)):
+            getattr(self, classname).append(recip)
+            return
+
         if isinstance(recip, Sequence):
             
             for recipient in recip:
@@ -34,16 +64,19 @@ class EmailDraftful:
                     self.__getattribute__(classname).append(recipient)
                     
                     continue
-                
-        if isinstance(recip, MailRecipient) or isinstance(recip, str):
-            
-            self.__getattribute__(classname).append(recip)
         
     def add_to(self, to: Sequence[MailRecipient | str] | MailRecipient | str):
         self._helper_add_recip(
             to, "to"
         )
         
+        return self
+
+    def remove_to(self, to: Sequence[MailRecipient | str] | MailRecipient | str):
+        self._helper_remove_recip(
+            to, "to"
+        )
+
         return self
     
     def add_bcc(self, bcc: Sequence[MailRecipient | str] | MailRecipient | str):
@@ -52,12 +85,26 @@ class EmailDraftful:
         )
         
         return self
+
+    def remove_bcc(self, bcc: Sequence[MailRecipient | str] | MailRecipient | str):
+        self._helper_remove_recip(
+            bcc, "bcc"
+        )
+
+        return self
     
     def add_cc(self, cc: Sequence[MailRecipient | str] | MailRecipient | str):
         self._helper_add_recip(
             cc, "cc"
         )
         
+        return self
+
+    def remove_cc(self, cc: Sequence[MailRecipient | str] | MailRecipient | str):
+        self._helper_remove_recip(
+            cc, "cc"
+        )
+
         return self
     
     def add_text(self, text: str):

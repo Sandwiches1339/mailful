@@ -101,17 +101,20 @@ Send mail to recipients.
                 for recip in maildraft.to
             )
 
+
             if maildraft.cc:
                 msg["Cc"] = ", ".join(
                     recip.email if isinstance(recip, MailRecipient) else recip
                     for recip in maildraft.cc
                 )
 
+
             if maildraft.bcc:
                 msg["Bcc"] = ", ".join(
                     recip.email if isinstance(recip, MailRecipient) else recip
                     for recip in maildraft.bcc
                 )
+
 
             msg["Subject"] = maildraft.subject
             if maildraft.text:
@@ -133,7 +136,7 @@ Send mail to recipients.
 
             now = time.time()
 
-            self._log(f"Finished sending email SMTP_SUBJECT{maildraft.subject}. Took {float(now - last):.4f}s")
+            self._log(f"""Finished sending email SMTP_SUBJECT"{maildraft.subject}"_TO_"{maildraft.to}". Took {float(now - last):.4f}s""")
             
             SMR = SendMailResponse(
                 success=True,
