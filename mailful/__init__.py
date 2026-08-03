@@ -1,8 +1,6 @@
 from .UnifiedMailer import MailfulClient
-from .helpers.MailClasses import MailMessage
-from . import providers
-from . import errors
 from .ProviderList import get_provider_quick
+from . import providers, errors, email_util
 from .helpers.MailClasses import (
     MailMessage,
     MailDraft,
@@ -10,13 +8,18 @@ from .helpers.MailClasses import (
     MailAttachment,
     HttpMailQuery
 )
+from .email_util.EmailClasses import EmailDraftful
 
 __all__ = [
     "MailfulClient",
+    "get_provider_quick",
     "providers",
     "errors",
     "MailMessage",
-    "get_provider_quick",
-    "MailClasses"
+    "MailDraft",
+    "MailRecipient",
+    "MailAttachment",
+    "HttpMailQuery",
+    "EmailDraftful",
+    "email_util"
 ]
-

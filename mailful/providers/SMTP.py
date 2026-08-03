@@ -5,7 +5,6 @@ from ..helpers.MailClasses import MailRecipient, MailDraft, MailMessage, MailAtt
 from importlib.util import find_spec
 from typing import TYPE_CHECKING, Sequence, List
 from dataclasses import dataclass
-import ssl, certifi
 import asyncio
 import time
 
@@ -19,20 +18,20 @@ class SMTPMailResponse:
 class SMTPProvider(BaseProvider):
 
     requirements: Sequence[str] = [
-        "email", "aiosmtplib"
+        "email", "aiosmtplib", "certifi"
     ]
 
     async def _update_connection(self):
+        
         if not self.client.is_connected:
             await self.client.connect(
-                tls_context=self.certificate,
                 hostname=self.host,
                 port=self.port,
                 username=self.username,
                 password=self.password,
+                tls_context=self.certificate,
                 
-                start_tls=True,
-                timeout=30
+                **self.extra_args
             )
             
     def _close_connection(self):
@@ -52,16 +51,24 @@ class SMTPProvider(BaseProvider):
         if self.verbose:
             print("[SMTPailful]", *args)
 
-    def __init__(self, host, port=587, username=None, password=None, verbose: bool = False):
+    def __init__(self, host, port=587, username=None, password=None, verbose: bool = False, use_mozilla_certificate: bool = False, **kwargs):
         import aiosmtplib
+        self.certificate = None
+        self.use_mozilla_certificate = use_mozilla_certificate
+        
+        if self.use_mozilla_certificate:
+            import ssl, certifi
 
-        self.certificate = ssl.create_default_context(cafile=certifi.where())
+            self.certificate = ssl.create_default_context(cafile=certifi.where())
+        
         self.host = host
         self.port = port
+        
         self.username = username
         self.password = password
+        self.extra_args = kwargs
 
-        self.client = aiosmtplib.SMTP(tls_context=self.certificate, hostname=self.host, port=self.port, username=self.username, password=self.password)
+        self.client = aiosmtplib.SMTP(tls_context=self.certificate, hostname=self.host, port=self.port, username=self.username, password=self.password, **kwargs)
         self.verbose = verbose
 
     async def send(self, maildraft) -> SendMailResponse[SMTPMailResponse]:
@@ -86,6 +93,7 @@ Send mail to recipients.
             
             client = self.client
             
+            # EmailBuilder. Maybe I should support this in v0.0.1dev4
             msg = EmailMessage()
             msg["From"] = maildraft.from_email or self.username
             msg["To"] = ", ".join(

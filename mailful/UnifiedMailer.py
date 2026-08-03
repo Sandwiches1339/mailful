@@ -7,6 +7,7 @@ from .providers import *
 from .providers.SMTP import *
 from typing import Literal, TypeVar, Generic, Type, Sequence, overload, Union
 from .helpers.MailClasses import MailRecipient, MailDraft, HttpMailQuery
+from .email_util.EmailClasses import EmailDraftful
 from dataclasses import field
 from typing import List, Any, cast
 import warnings, asyncio
@@ -113,8 +114,7 @@ Example:
 >>>     username="sandwichesarethebest",
 >>>     password="meow",
 
->>>     use_tls=True,
->>>     use_ssl=True
+>>>     use_tls=True
 >>> )
 
 >>> client.send_quick_sync(
@@ -137,7 +137,7 @@ The rest of your code won't need to change, since the functions will stay the sa
 
         self.verbose = verbose
 
-    async def send(self, maildraft: MailDraft) -> SendMailResponse[T]:
+    async def send(self, maildraft: MailDraft | EmailDraftful) -> SendMailResponse[T]:
             """
             Send mail to recipients.
 
@@ -146,23 +146,55 @@ The rest of your code won't need to change, since the functions will stay the sa
             :raises MailSendError: If the AgentMail API failed to send the mail.
             """
             
-            result = await self.provider.send(maildraft)
+            # Sorry, but EmailDraftful is immediately converted to a normal MailDraft.
+            mdresult = None
+            
+            if type(maildraft) == EmailDraftful:
+                mdresult = MailDraft(
+                    maildraft.subject,
+                    maildraft.text,
+                    maildraft.html,
+                    maildraft.to,
+                    maildraft.cc,
+                    maildraft.bcc,
+                )
+            
+            if type(maildraft) == MailDraft:
+                mdresult = maildraft
+            
+            result = await self.provider.send(mdresult)
     
             return result
 
-    def send_sync(self, maildraft: MailDraft) -> SendMailResponse:
-                """
-                Send mail to recipients synchronously.
-    
-                :param maildraft: The MailDraft object containing sender, recipients, subject, and content.
-                :returns: The sent mail message response.
-                :raises MailSendError: If the AgentMail API failed to send the mail.
-                """
+    def send_sync(self, maildraft: MailDraft | EmailDraftful) -> SendMailResponse:
+            """
+            Send mail to recipients synchronously.
+
+            :param maildraft: The MailDraft object containing sender, recipients, subject, and content.
+            :returns: The sent mail message response.
+            :raises MailSendError: If the AgentMail API failed to send the mail.
+            """
                 
-                result = asyncio.run(self.provider.send(maildraft))
-                result: SendMailResponse[T]
-        
-                return result
+            mdresult = None
+            
+            if type(maildraft) == EmailDraftful:
+                mdresult = MailDraft(
+                    maildraft.subject,
+                    maildraft.text,
+                    maildraft.html,
+                    maildraft.to,
+                    maildraft.cc,
+                    maildraft.bcc,
+                )
+            
+            if type(maildraft) == MailDraft:
+                mdresult = maildraft
+            
+            result = asyncio.run(
+                self.provider.send(mdresult)
+            )
+    
+            return result
 
     def send_quick_sync(self,
             *,
