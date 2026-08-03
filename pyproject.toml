@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=75.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mailful"
+version = "0.0.1.dev3"
+description = "Unified, Modular, and Agnostic Asynchronous (but also Synchronous) mail client for multiple providers."
+requires-python = ">=3.10"
+authors = [
+    { name = "sandwiches1399", email = "sandwichesarethebestmeow@gmail.com" }
+]
+license = { file = "LICENSE" }
+
+dependencies = [
+    "aiohttp>=3.0.0"
+]
+
+[project.urls]
+Repository = "https://github.com/Sandwiches1339/mailful"
+
+[project.optional-dependencies]
+smtp = [
+    "aiosmtplib>=3.0.0",
+]
+
+agentmail = [
+    "agentmail>=0.1.0",
+]
+
+all = [
+    "aiosmtplib>=3.0.0",
+    "agentmail>=0.1.0",
+]

@@ -1,0 +1,11 @@
+aiohttp>=3.0.0
+
+[agentmail]
+agentmail>=0.1.0
+
+[all]
+aiosmtplib>=3.0.0
+agentmail>=0.1.0
+
+[smtp]
+aiosmtplib>=3.0.0
