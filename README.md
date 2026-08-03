@@ -28,3 +28,5 @@ As said before, yeah. Though, I might've failed to convey it enough.
 
 # Is this production-ready?
 Well, mailful is still in... *active development*, so any bugs you find, please open an issue!
+
+If your still reading this, go check out mailbridge too!
