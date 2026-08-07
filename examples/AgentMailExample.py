@@ -5,7 +5,7 @@ import asyncio
 client = mailful.MailfulClient(
     provider=mailful.get_provider_quick("agentmail"),
     
-    api_key="am_us_6e3a9c773ad2380816fb536f490f10fb54783d4bac51797b69cfd65830c24b61",
+    api_key="xxxxxxxx",
     inbox_id="sandwichesarethebestmeow@agentmail.to", 
     verbose=True
 )
