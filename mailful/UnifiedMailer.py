@@ -416,7 +416,7 @@ The rest of your code won't need to change, since the functions will stay the sa
             )
                 
                     
-    async def set_websocket(self, toggle: bool, **kwargs):
+    async def set_websockets(self, toggle: bool, **kwargs):
         """
         In order to use this, the provider must support WebSockets.
         
