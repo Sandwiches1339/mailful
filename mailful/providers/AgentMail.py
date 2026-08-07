@@ -4,12 +4,13 @@ from ..errors.ProviderErrors import MissingParametersError, ProviderRateLimitedE
 from ..helpers.MailClasses import MailRecipient, MailDraft, MailMessage, MailAttachment, SendMailResponse
 from importlib.util import find_spec
 from traceback import print_exc
-from typing import TYPE_CHECKING, Sequence, TypeVar, cast
+from typing import TYPE_CHECKING, Sequence, TypeVar, cast, Type, Callable, List, Any, Dict, get_args
 from dataclasses import dataclass
 import aiohttp
 import asyncio
 import warnings
 import time
+
 
 # hello. heres some paramaters.
 # i dont know why i added them, but yeah. hardcoded.
@@ -22,6 +23,9 @@ MAX_ATTEMPTS = 5
 
 if TYPE_CHECKING:
     from agentmail.messages import SendMessageResponse
+    from ..UnifiedMailer import MailfulClient
+    
+EventInfo = TypeVar("EventInfo")
 
 @dataclass
 class AgentMailAdditionalInfo:
@@ -42,6 +46,10 @@ class AgentMailProvider(BaseProvider):
     requirements: Sequence[str] = [
         "agentmail"
     ]
+    
+    flags: Dict[str, bool] = {
+        "websockets": True
+    }
 
     @classmethod
     def _has_requirements(cls):
@@ -56,25 +64,27 @@ class AgentMailProvider(BaseProvider):
         if self.verbose:
             print("[AgentMailful]", *args)
 
-    def __init__(self, api_key: str, inbox_id: str, verbose: bool = False):
+    def __init__(self, api_key: str, inbox_id: str, owner: Any = None, verbose: bool = False):
         from agentmail import AsyncAgentMail
 
         self.verbose = verbose
+        self.owner = owner 
 
         self.api_key = api_key
         self.client = AsyncAgentMail(api_key=api_key)
         self.inbox_id = inbox_id
         
+        self._socket = None
+        
+        self._listeners = {}
+        
         self._log("Initialized AgentMailful")
-        
-        
-        
 
     async def send(self, maildraft) -> SendMailResponse[None]:
         """
 Send mail to recipients.
 
-:param maildraft: The MailDraft object containing sender, recipients, subject, and content.
+:param maildraft: The MailDraft (Not to be confused with EmailDraftful) object containing sender, recipients, subject, and content.
 :returns: The sent mail message response.
 :raises MailSendError: If the AgentMail API failed to send the mail.
 """
@@ -128,9 +138,7 @@ Send mail to recipients.
         for attempt in range(MAX_ATTEMPTS):
 
             try:
-                print("start")
                 result = await method(*args, **kwargs)
-                print(result)
                 
                 return result
 
@@ -189,17 +197,53 @@ Send mail to recipients.
                     except aiohttp.ClientError as e:
                         newAttachment.content = None
 
-                        print(f"Failed to download attachment {attachment.attachment_id}, {e}")
+                        self._log(f"Failed to download attachment {attachment.attachment_id}, {e}")
 
                     except Exception as e:
                         newAttachment.content = None
 
-                        print(f"Attachment error for {attachment.attachment_id}, {e}")
+                        self._log(f"Attachment error for {attachment.attachment_id}, {e}")
 
                 newAttachment.extra_provider_info = newAgentMailStuff
 
         return attachments
-
+    
+    async def on(self, event_name: str):
+        
+        def decorator(func: Callable) -> Callable:
+            event_name_listeners: List = self._listeners.get(event_name, [])
+            
+            event_name_listeners.append(func)
+            return func
+        
+        return decorator
+    
+    """Emit events from provider."""
+    async def _emit(self, event_name: str, event_data: Type[EventInfo]):
+        
+        if self.owner:
+            self.owner: MailfulClient
+            
+            EmitFunction: Callable | None = getattr(self.owner, "_emit", None)
+            
+            if EmitFunction:
+                await EmitFunction(
+                    event_name,
+                    event_data
+                )
+            
+        if event_name in self._listeners.keys():
+            
+            for event in self._listeners.get(event_name, []):
+                event: Callable
+                
+                event(
+                    event_data
+                )
+                
+                
+                
+        
     
     async def receive(self, HttpMailQuery)-> Sequence[MailMessage]:
         """Receive mail from inbox. 
@@ -328,3 +372,75 @@ Send mail to recipients.
                 provider="agentmail",
                 message=str(e),
             )
+            
+    async def stop_websocket(self):
+        """Lower level function to stop the AgentMail Websocket."""
+        from agentmail.websockets import socket_client
+        self._socket: socket_client.AsyncWebsocketsSocketClient
+        
+        if self._socket:
+            
+            del self._socket
+            
+    async def start_websocket(self):
+        """Lower level function to start the AgentMail Websocket, to listen to what the WebSocket emits, please use the higher-level webhook_connect function in MailfulClient."""
+        from agentmail.websockets import socket_client, Subscribe
+        from agentmail import EventType, MessageReceivedEvent, MessageSentEvent
+        
+        if self.client:
+            client = self.client
+            
+            inboxes = self.client.inboxes
+        
+            messages = inboxes.messages
+            
+            async with client.websockets.connect() as socket:
+
+                await socket.send_subscribe(Subscribe(inbox_ids=[self.inbox_id]))
+
+                async for event in socket:
+
+                    if isinstance(event, MessageReceivedEvent):
+                        
+                        message = event.message
+                        
+                        text = None
+                        html = None
+
+                        rawtext = None
+                        rawhtml = None
+                        
+                        # dataSaver soon.
+                        if True:
+                            message = await self._request(messages.get, message.inbox_id, message.message_id)
+
+                            text = message.extracted_text
+                            html = message.extracted_html
+
+                            rawtext = message.text
+                            rawhtml = message.html
+                        
+                        mailMessage = MailMessage(
+                            subject=message.subject,
+                            text=text,
+                            raw_text=rawtext,
+                            html=html,
+                            raw_html=rawhtml,
+                            from_=message.from_,
+                            timestamp=message.timestamp,
+                            cc=message.cc,
+                            bcc=message.bcc,
+                            headers=message.headers,
+                            references=message.references,
+                            preview=message.preview,
+                            in_depth=True,
+                            to=message.to,
+                            in_reply_to=message.in_reply_to
+                        )
+                        
+                        await self._emit(
+                            "MessageReceived",
+                            
+                            mailMessage
+                        )
+                        

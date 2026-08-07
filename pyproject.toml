@@ -6,14 +6,15 @@ build-backend = "setuptools.build_meta"
 name = "mailful"
 version = "0.0.1.dev4"
 description = "Unified, Modular, and Agnostic Asynchronous (but also Synchronous) mail client for multiple providers."
-requires-python = ">=3.10"
+requires-python = ">=3.7"
 authors = [
     { name = "sandwiches1399", email = "sandwichesarethebestmeow@gmail.com" }
 ]
 license = { file = "LICENSE" }
 
 dependencies = [
-    "aiohttp>=3.0.0"
+    "aiohttp>=3.0.0",
+    "jinja2>=3.1.6"
 ]
 
 [project.urls]

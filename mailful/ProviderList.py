@@ -1,4 +1,4 @@
-from typing import Dict, Literal, Type, overload, Union
+from typing import Dict, Literal, Type, overload, Union, Any
 
 from .providers import *
 from .errors.ProviderErrors import ProviderNotFoundError
@@ -23,7 +23,7 @@ def get_provider_quick(name: Literal["smtp"]) -> type[SMTPProvider]: ...
 def get_provider_quick(name: Literal["agentmail"]) -> type[AgentMailProvider]: ...
 
 
-def get_provider_quick(name: str) -> type[BaseProvider[any]]:
+def get_provider_quick(name: str) -> BaseProvider:
     match name.lower():
         case "agentmail":
             return AgentMailProvider

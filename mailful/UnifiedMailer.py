@@ -1,11 +1,11 @@
 from .abstractbaseclass.ProviderClass import BaseProvider
-from .errors.ProviderErrors import ProviderNotFoundError, MissingRequirementsToRunProviderError
+from .errors.ProviderErrors import ProviderNotFoundError, MissingRequirementsToRunProviderError, ProviderDoesNotHaveFeatureError
 from .ProviderList import reg, RegisteredProviders
 from .providers import *
 
 #smtp doesnt work for imports 4 some reason looll
 from .providers.SMTP import *
-from typing import Literal, TypeVar, Generic, Type, Sequence, overload, Union
+from typing import Literal, TypeVar, Generic, Type, Sequence, overload, Union, Callable
 from .helpers.MailClasses import MailRecipient, MailDraft, HttpMailQuery
 from .email_util.EmailClasses import EmailDraftful
 from dataclasses import field
@@ -17,6 +17,7 @@ P = TypeVar("P", bound="BaseProvider")
 T = TypeVar("T")
 
 # v0.0.2 will have more documentation!
+
 
 
 """I have provided providers if you want to, this is only a method for getting providers quick without importing classes."""
@@ -42,6 +43,8 @@ class MailfulClient(Generic[P, T]):
 >>> )
 
     """
+    
+    # Boilerplate, don't wanna write the same thing two times, so I did this.
 
     def _boiler_provider_set(self, provider: Type[P], *args, verbose: bool = False, **kwargs):
         
@@ -54,9 +57,9 @@ class MailfulClient(Generic[P, T]):
 
             if not tryToGetProvider._has_requirements():
                 raise MissingRequirementsToRunProviderError(f"""Missing requirements for provider: {tryToGetProvider.__name__}.
-                                             You must install these packages: pip install {" ".join(tryToGetProvider.requirements)}.""")
+                             You must install these packages with the command: pip install {" ".join(tryToGetProvider.requirements)}.""")
                 
-            self.provider = tryToGetProvider(*args, **kwargs, verbose=verbose)
+            self.provider = tryToGetProvider(owner=self, *args, **kwargs, verbose=verbose)
 
             return
 
@@ -64,7 +67,7 @@ class MailfulClient(Generic[P, T]):
              raise MissingRequirementsToRunProviderError(f"""Missing requirements for provider: {provider.__name__}.
                              You must install these packages with the command: pip install {" ".join(provider.requirements)}.""")
         
-        self.provider = provider(*args, **kwargs, verbose=verbose)
+        self.provider = provider(owner=self, *args, **kwargs, verbose=verbose)
         
 
     """
@@ -86,6 +89,21 @@ class MailfulClient(Generic[P, T]):
         
         self.provider : P
         self.verbose = verbose
+        self._listeners = {}
+        
+    def on(self, event_name: str):
+        
+        def decorator(func: Callable) -> Callable:
+            if self._listeners.get(event_name, None) == None:
+                self._listeners[event_name] = []
+            
+            event_name_listeners: List = self._listeners[event_name]
+            
+            event_name_listeners.append(func)
+            
+            return func
+        
+        return decorator
 
     def change_provider(self, provider: Type[P] | None = None, *args, verbose: bool = False, **kwargs):
         """
@@ -165,6 +183,8 @@ The rest of your code won't need to change, since the functions will stay the sa
             result = await self.provider.send(mdresult)
     
             return result
+    
+    # Sync counterparts.
 
     def send_sync(self, maildraft: MailDraft | EmailDraftful) -> SendMailResponse:
             """
@@ -383,3 +403,42 @@ The rest of your code won't need to change, since the functions will stay the sa
                         )
                 
                         return await self.provider.receive(httpMailQuery)
+                    
+    # EventHandler
+    
+    async def _emit(self, event_name: str, event_data):
+            
+            
+        for event in self._listeners.get(event_name, []):
+            event: Callable
+            await event(
+                event_data
+            )
+                
+                    
+    async def set_websocket(self, toggle: bool, **kwargs):
+        """
+        In order to use this, the provider must support WebSockets.
+        
+        Args:
+            on (bool): Turn feature on or off.
+        """
+        
+        if not self.provider._has_flag(
+            "websockets"
+        ): 
+            raise ProviderDoesNotHaveFeatureError(
+            "websockets"
+        )
+
+        
+        if toggle == True:
+            await self.provider.start_websocket(
+                **kwargs
+            )
+            
+        elif toggle == False:
+            
+            await self.provider.stop_websocket(
+                **kwargs
+            )

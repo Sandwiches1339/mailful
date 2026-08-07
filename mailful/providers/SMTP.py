@@ -3,7 +3,7 @@ from ..errors.MailErrors import MailSendError
 from ..errors.ProviderErrors import MissingParametersError, ProviderRateLimitedError
 from ..helpers.MailClasses import MailRecipient, MailDraft, MailMessage, MailAttachment, SendMailResponse
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Sequence, List
+from typing import TYPE_CHECKING, Sequence, List, Any, Dict
 from dataclasses import dataclass
 import asyncio
 import time
@@ -20,6 +20,10 @@ class SMTPProvider(BaseProvider):
     requirements: Sequence[str] = [
         "email", "aiosmtplib", "certifi"
     ]
+    
+    flags: Dict[str, bool] = {
+        "websockets": False
+    }
 
     async def _update_connection(self):
         
@@ -33,6 +37,8 @@ class SMTPProvider(BaseProvider):
                 
                 **self.extra_args
             )
+            
+            self._log("Reconnected to SMTP server.")
             
     def _close_connection(self):
         if self.client.is_connected:
@@ -51,7 +57,7 @@ class SMTPProvider(BaseProvider):
         if self.verbose:
             print("[SMTPailful]", *args)
 
-    def __init__(self, host, port=587, username=None, password=None, verbose: bool = False, use_mozilla_certificate: bool = False, **kwargs):
+    def __init__(self, host, port=587, username=None, password=None, owner: Any | None = None, verbose: bool = False, use_mozilla_certificate: bool = True, **kwargs):
         import aiosmtplib
         self.certificate = None
         self.use_mozilla_certificate = use_mozilla_certificate
@@ -60,6 +66,8 @@ class SMTPProvider(BaseProvider):
             import ssl, certifi
 
             self.certificate = ssl.create_default_context(cafile=certifi.where())
+            
+        self.owner = owner or None
         
         self.host = host
         self.port = port
@@ -75,7 +83,7 @@ class SMTPProvider(BaseProvider):
         """
 Send mail to recipients.
 
-:param maildraft: The MailDraft object containing sender, recipients, subject, and content.
+:param maildraft: The MailDraft (Not to be confused with EmailDraftful) object containing sender, recipients, subject, and content.
 :returns: The sent mail response.
 :raises MailSendError: If the SMTP failed to send the mail.
 """
@@ -94,6 +102,7 @@ Send mail to recipients.
             client = self.client
             
             # EmailBuilder. Maybe I should support this in v0.0.1dev4
+            # I did.
             msg = EmailMessage()
             msg["From"] = maildraft.from_email or self.username
             msg["To"] = ", ".join(
@@ -158,8 +167,6 @@ Send mail to recipients.
 
     
     async def receive(self, HttpMailQuery)-> Sequence[MailMessage]:
-        """smtp doesnt support this shit lol"""
+        """SMTP doesn't support this "shit", L(AUGHING)O(UT)L(OUD)."""
 
         if not self.client: return
-
-        

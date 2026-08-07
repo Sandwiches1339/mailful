@@ -8,6 +8,11 @@ class ProviderNotFoundError(Exception):
 class MissingRequirementsToRunProviderError(Exception):
     def __init__(self, message: str):
         super().__init__(message)
+        
+class ProviderDoesNotHaveFeatureError(Exception):
+    def __init__(self, message: str):
+        super().__init__(f"Provider does not have {message} feature.")
+
 
 class MissingParametersError(Exception):
     def __init__(self, message: str):

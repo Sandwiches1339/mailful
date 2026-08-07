@@ -13,6 +13,8 @@ mailful.egg-info/top_level.txt
 mailful/abstractbaseclass/ProviderClass.py
 mailful/email_util/EmailClasses.py
 mailful/email_util/__init__.py
+mailful/email_util/email_util_errors/EmailClassesErrors.py
+mailful/errors/CommonErrors.py
 mailful/errors/MailErrors.py
 mailful/errors/ProviderErrors.py
 mailful/errors/__init__.py

@@ -1,6 +1,5 @@
 import mailful
-
-from discord.embeds import Embed
+import asyncio
 
 mailfulClient = mailful.MailfulClient(mailful.get_provider_quick("smtp"),
     username="xxxxxxxxxx",
@@ -11,9 +10,25 @@ mailfulClient = mailful.MailfulClient(mailful.get_provider_quick("smtp"),
     verbose=True
 )
 
+
+mailTemplater = mailful.email_util.EmailClasses.EmailTemplate(
+    """{{ start }}
+    
+    <p>You fails</p>
+    
+    {{ end }}"""
+)
+
+rendered_text = mailTemplater.render(
+    
+    start="<h1>My thing start</p>",
+    end="<h1>My thing end</h1>"
+    
+)
+
 newEmailful = mailful.EmailDraftful()\
     .add_subject("IMPORTANT!")\
-    .add_html("<p>plz read</p>")\
+    .add_html(rendered_text)\
     .add_text("plz read")\
     .add_to("sandwichesarethebestmeow@gmail.com")
 
